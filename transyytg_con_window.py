@@ -6,6 +6,8 @@ import threading
 import queue
 import traceback
 import transyytg_con
+import os
+import json
 
 class FunctionRunner:
     """安全执行外部函数的线程管理器"""
@@ -72,6 +74,7 @@ class Application:
         # 初始化按钮列表
         self.control_buttons = []
         self.run_button = None
+        self.fields_config = []
         
         self.setup_ui()
         
@@ -107,19 +110,27 @@ class Application:
             self.root.after(100, self.poll_task_status)
 
     def create_input_fields(self):
-        # 定义输入字段配置
-        fields_config = [
-            ("api_key", "sk-xxxxxx", "entry", None),
-            ("base_url", "https://api.deepseek.com", "entry", None),
-            ("model", "deepseek-chat", "entry", None),
-            ("hint", "你是一个翻译，下面是跟战斗机任务（DCS模拟飞行游戏）想关的英语，翻译成简体中文，不要使用markdown输出, 保持原文的换行格式，仅作为翻译不要续写，原文和翻译词数不能相差过大。", "text", None),
-            ("remove_json", False, "radio", {"options": ["是", "否"]}),
-            ("只输出翻译", False, "radio", {"options": ["是", "否"]}),
-            ("路径", "E:\\Eagle Dynamics\\DCS World\\Mods\\campaigns\\FA-18C Raven One", "folder", None),
-        ]
+        ## 在cache文件夹下读取fields_config.json文件
+
+        # 如果不存在则按以上fields_config创建json文件
+        if not os.path.exists("./cache/fields_config.json"):
+            self.fields_config = [
+                ("api_key", "sk-xxxxxx", "entry", None),
+                ("base_url", "https://api.deepseek.com", "entry", None),
+                ("model", "deepseek-chat", "entry", None),
+                ("hint", "你是一个翻译，下面是跟战斗机任务（DCS模拟飞行游戏）想关的英语，翻译成简体中文，不要使用markdown输出, 保持原文的换行格式，仅作为翻译不要续写，原文和翻译词数不能相差过大。", "text", None),
+                ("remove_json", False, "radio", {"options": ["是", "否"]}),
+                ("只输出翻译", False, "radio", {"options": ["是", "否"]}),
+                ("路径", "E:\\Eagle Dynamics\\DCS World\\Mods\\campaigns\\FA-18C Raven One", "folder", None),
+            ]
+            with open("./cache/fields_config.json", "w", encoding="utf-8") as f:
+                json.dump(self.fields_config, f, ensure_ascii=False, indent=4)
+        with open("./cache/fields_config.json", "r", encoding="utf-8") as f:
+            self.fields_config = json.load(f)
         
+
         self.entries = []
-        for i, (label_text, default_value, field_type, options) in enumerate(fields_config):
+        for i, (label_text, default_value, field_type, options) in enumerate(self.fields_config):
             tk.Label(self.left_frame, text=label_text).grid(row=i, column=0, padx=5, pady=5, sticky=tk.NE)
             
             if field_type == "entry":
@@ -171,7 +182,7 @@ class Application:
         
         # 添加功能按钮
         buttons_frame = tk.Frame(self.left_frame)
-        buttons_frame.grid(row=len(fields_config)+2, column=0, columnspan=2, pady=10, sticky=tk.EW)
+        buttons_frame.grid(row=len(self.fields_config)+2, column=0, columnspan=2, pady=10, sticky=tk.EW)
         
         submit_btn = tk.Button(buttons_frame, text="提交", command=self.on_submit)
         submit_btn.pack(side=tk.LEFT, expand=True, padx=5)
@@ -287,21 +298,31 @@ class Application:
 
     def on_submit(self):
         values = []
-        for entry_type, entry in self.entries:
+        ### 收集所有输入框的值，同时修改self.fields_config
+        for i, (entry_type, entry) in enumerate(self.entries):
             if entry_type == "entry":
                 values.append(entry.get())
+                self.fields_config[i][1] = entry.get()  # 更新配置
             elif entry_type == "text":
                 values.append(entry.get("1.0", tk.END).strip())
+                self.fields_config[i][1] = entry.get("1.0", tk.END).strip()  # 更新配置
             elif entry_type == "radio":
                 values.append("是" if entry.get() else "否")
+                self.fields_config[i][1] = entry.get()  # 更新配置
             elif entry_type == "folder":
                 values.append(entry.get())
+                self.fields_config[i][1] = entry.get()  # 更新配置
         
         print("\n提交的数据:")
         for i, value in enumerate(values, 1):
             print(f"输入{i}: {value}")
         print("-" * 30)
         self.toggle_buttons_state(tk.NORMAL)
+        
+        ## 将提交的数据保存到cache/fields_config.json文件中
+        with open("./cache/fields_config.json", "w", encoding="utf-8") as f:
+            json.dump(self.fields_config, f, ensure_ascii=False, indent=4)
+        
 
     def reset_fields(self):
         defaults = [

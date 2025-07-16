@@ -173,8 +173,8 @@ def readAndTranslateJson(jsonPath):
                 translatedText = translatedJson[value]
                 print("如果已经翻译过，则直接使用翻译后的文本：\n"+value + "\n" + translatedText)
             else:
-                # 如果没有翻译过，则调用翻译函数
-                translatedText = dptrans(text=value, api_key=api_key, base_url=base_url, model=model, hint=hint)
+                # 如果没有翻译过，则调用翻译函数，如果value中含有Script字样，则去除Script字样翻译
+                translatedText = dptrans(text=value.replace("[Script]", ""), api_key=api_key, base_url=base_url, model=model, hint=hint)
                 # 将翻译后的文本加入到translatedJson中，由于使用了concurrent.futures并发执行，因此需要加锁
                 # translatedJson[value] = translatedText
                 # 这里使用了一个简单的锁机制，实际使用中可以使用更复杂的锁机制 
@@ -188,10 +188,16 @@ def readAndTranslateJson(jsonPath):
             # 原文本下换行然后加入翻译文本
             if onlyChs:
                 # 如果只输出中文，则不添加原文本
-                jsonData[key] = translatedText
+                if "[Script]" in key:
+                    jsonData[key] = "[Script]" + translatedText
+                else:
+                    jsonData[key] = translatedText
             elif "Radio" in key:
                 # 如果是Radio类型的文本，则不添加换行符
-                jsonData[key] = value + translatedText
+                jsonData[key] = "[" + value + "][" + translatedText + "]"
+            elif "Script" in key:
+                # 如果是Script类型的文本，则不添加换行符
+                jsonData[key] = value + "[" + translatedText + "]"
             else:
                 jsonData[key] = value + "\n" + translatedText
             #
@@ -256,7 +262,8 @@ if __name__ == "__main__":
     
     # 遍历文件列表，解压缩文件
     for file in fileList:
-        extract_specific_file(file, targetFileInZip, os.path.basename(file) + ".json", output_dir=mizPath)
+        # extract_specific_file(file, targetFileInZip, os.path.basename(file) + ".json", output_dir=mizPath)
+        extract_specific_file(file, targetFileInZip, os.path.basename(file) + ".json", output_dir=os.path.dirname(file))
     
     import logging
     ## 设置日志格式

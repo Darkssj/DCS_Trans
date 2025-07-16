@@ -8,7 +8,7 @@ import json
 import intract
 
 
-mizPath = "D:\\temp\\tq"  # 任务路径
+mizPath = "G:\\E\\FROG-7"  # 任务路径
 
 targetFileInZip = "l10n/DEFAULT/dictionary"
 
@@ -130,6 +130,6 @@ if __name__ == "__main__":
     
     # 遍历文件列表，解压缩文件
     for file in fileList:
-        extract_specific_file(file, targetFileInZip, os.path.basename(file) + ".json", output_dir=mizPath)
+        extract_specific_file(file, targetFileInZip, os.path.basename(file) + ".json", output_dir=os.path.dirname(file))
         
         intract.dictionary_intract(file + ".json")

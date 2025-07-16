@@ -97,7 +97,7 @@ def readAndTranslateJson(jsonPath, api_key, base_url, model, hint, onlyChs):
             else:
                 try:
                 # 如果没有翻译过，则调用翻译函数
-                    translatedText = dptrans(text=value, api_key=api_key, base_url=base_url, model=model, hint=hint)
+                    translatedText = dptrans(text=value.replace("[Script]", ""), api_key=api_key, base_url=base_url, model=model, hint=hint)
                     logging.info(f"翻译：{value} -> {translatedText}")
                 except Exception as e:
                     print("翻译API调用出错")
@@ -116,10 +116,13 @@ def readAndTranslateJson(jsonPath, api_key, base_url, model, hint, onlyChs):
             # 原文本下换行然后加入翻译文本
             if onlyChs:
                 # 如果只输出中文，则不添加原文本
-                jsonData[key] = translatedText
+                if "[Script]" in key:
+                    jsonData[key] = "[Script]" + translatedText
+                else:
+                    jsonData[key] = translatedText
             elif "Radio" in key:
                 # 如果是Radio类型的文本，则不添加换行符
-                jsonData[key] = value + translatedText
+                jsonData[key] = "[" + value + "][" + translatedText + "]"
             else:
                 jsonData[key] = value + "\n" + translatedText
             #
