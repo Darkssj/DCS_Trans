@@ -1,12 +1,9 @@
-
-import ast
 import re
 import zipfile
 import os
 import json
 
-import intract
-
+from . import intract_miz
 
 mizPath = "G:\\E\\FROG-7"  # 任务路径
 
@@ -27,11 +24,10 @@ import zipfile
 import os
 
 
-
 def extract_and_rename(zip_path, target_file, new_name, output_dir='.'):
     """
     从ZIP中提取特定文件并重命名
-    
+
     :param zip_path: ZIP文件路径
     :param target_file: ZIP中要提取的文件名
     :param new_name: 重命名后的文件名
@@ -40,15 +36,16 @@ def extract_and_rename(zip_path, target_file, new_name, output_dir='.'):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         # 确保输出目录存在
         os.makedirs(output_dir, exist_ok=True)
-        
+
         # 提取并重命名
         with zip_ref.open(target_file) as file_in_zip:
             with open(os.path.join(output_dir, new_name), 'wb') as file_out:
                 file_out.write(file_in_zip.read())
                 print(f"Extracted and renamed {target_file} to {new_name} in {output_dir}.")
 
+
 def find_dictkey_entries(input_string):
-    pattern =  r'\["DictKey_\w+"\]\s*=\s*'
+    pattern = r'\["DictKey_\w+"\]\s*=\s*'
     matches = re.finditer(pattern, input_string, re.DOTALL)
 
     startEnd = [(match.start(), match.end()) for match in matches]
@@ -74,7 +71,7 @@ def find_dictkey_entries(input_string):
 def extract_specific_file(zip_path, target_path, new_name=None, output_dir='.'):
     """
     从ZIP中提取特定路径下的文件（可处理重名文件）
-    
+
     :param zip_path: ZIP文件路径
     :param target_path: ZIP中文件的完整路径(如 'folder/subfolder/file.txt')
     :param new_name: 重命名后的文件名(可选)
@@ -84,24 +81,24 @@ def extract_specific_file(zip_path, target_path, new_name=None, output_dir='.'):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         # 标准化路径比较（确保路径分隔符一致）
         target_path = target_path.replace('\\', '/')
-        
+
         # 查找完全匹配的文件
-        matched_files = [f for f in zip_ref.namelist() 
-                        if f.replace('\\', '/') == target_path]
-        
+        matched_files = [f for f in zip_ref.namelist()
+                         if f.replace('\\', '/') == target_path]
+
         if not matched_files:
             raise FileNotFoundError(f"未找到路径 '{target_path}' 下的文件")
-        
+
         # 如果未指定新名称，则使用原文件名
         if new_name is None:
             new_name = os.path.basename(target_path)
-        
+
         os.makedirs(output_dir, exist_ok=True)
         output_path = os.path.join(output_dir, new_name)
-        
+
         with zip_ref.open(matched_files[0]) as file_in_zip, \
-             open(output_path, 'w', encoding='utf-8') as file_out:
-            
+                open(output_path, 'w', encoding='utf-8') as file_out:
+
             dic_str = file_in_zip.read().decode('utf-8').replace('\\"', '"').replace('\\\n', '\n').replace('\\\\', '\\')
             dic_str = re.search(r'\{([\s\S]*)\}', dic_str).group(0)
             # pattern = r'\["(DictKey_\w+)"\]\s*=\s*"([\s\S]*?)"(?=,\n)'
@@ -120,16 +117,17 @@ def extract_specific_file(zip_path, target_path, new_name=None, output_dir='.'):
             result = {}
             result = find_dictkey_entries(dic_str)
             json.dump(result, file_out, indent=4, ensure_ascii=False)
-        
+
         return output_path
-                
+
+
 if __name__ == "__main__":
     # 获取当前路径下的文件
     fileList = get_files(mizPath)
     print(fileList)  # 打印文件列表
-    
+
     # 遍历文件列表，解压缩文件
     for file in fileList:
         extract_specific_file(file, targetFileInZip, os.path.basename(file) + ".json", output_dir=os.path.dirname(file))
-        
-        intract.dictionary_intract(file + ".json")
+
+        intract_miz.dictionary_intract(file + ".json")
